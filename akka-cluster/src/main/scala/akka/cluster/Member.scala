@@ -21,6 +21,8 @@ import MemberStatus._
 class Member private[cluster] (
   /** INTERNAL API **/
   private[cluster] val uniqueAddress: UniqueAddress,
+  /** INTERNAL API **/
+  private[cluster] val upNumber: Int,
   val status: MemberStatus,
   val roles: Set[String]) extends Serializable {
 
@@ -41,14 +43,24 @@ class Member private[cluster] (
   def getRoles: java.util.Set[String] =
     scala.collection.JavaConverters.setAsJavaSetConverter(roles).asJava
 
+  /**
+   * Is this member older, has been part of cluster longer, than another
+   * member.
+   */
+  def isOlder(other: Member): Boolean = upNumber < other.upNumber
+
   def copy(status: MemberStatus): Member = {
     val oldStatus = this.status
     if (status == oldStatus) this
     else {
       require(allowedTransitions(oldStatus)(status),
         s"Invalid member status transition [ ${this} -> ${status}]")
-      new Member(uniqueAddress, status, roles)
+      new Member(uniqueAddress, upNumber, status, roles)
     }
+  }
+
+  def copyUp(upNumber: Int): Member = {
+    new Member(uniqueAddress, upNumber, status, roles).copy(Up)
   }
 }
 
@@ -64,12 +76,12 @@ object Member {
    * Create a new member with status Joining.
    */
   private[cluster] def apply(uniqueAddress: UniqueAddress, roles: Set[String]): Member =
-    new Member(uniqueAddress, Joining, roles)
+    new Member(uniqueAddress, Int.MaxValue, Joining, roles)
 
   /**
    * INTERNAL API
    */
-  private[cluster] def removed(node: UniqueAddress): Member = new Member(node, Removed, Set.empty)
+  private[cluster] def removed(node: UniqueAddress): Member = new Member(node, Int.MaxValue, Removed, Set.empty)
 
   /**
    * `Address` ordering type class, sorts addresses by host and port.

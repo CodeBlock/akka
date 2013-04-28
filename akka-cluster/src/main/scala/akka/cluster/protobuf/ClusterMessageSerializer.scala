@@ -143,7 +143,8 @@ class ClusterMessageSerializer(val system: ExtendedActorSystem) extends Serializ
     def mapHash(hash: String) = mapWithErrorMessage(hashMapping, hash, "hash")
 
     def memberToProto(member: Member) = {
-      msg.Member(mapUniqueAddress(member.uniqueAddress), msg.MemberStatus.valueOf(memberStatusToInt(member.status)), member.roles.map(mapRole).to[Vector])
+      msg.Member(mapUniqueAddress(member.uniqueAddress), member.upNumber,
+        msg.MemberStatus.valueOf(memberStatusToInt(member.status)), member.roles.map(mapRole).to[Vector])
     }
 
     def vectorClockToProto(version: VectorClock) = {
@@ -181,7 +182,7 @@ class ClusterMessageSerializer(val system: ExtendedActorSystem) extends Serializ
     val hashMapping = gossip.allHashes
 
     def memberFromProto(member: msg.Member) = {
-      new Member(addressMapping(member.addressIndex), memberStatusFromInt(member.status.id),
+      new Member(addressMapping(member.addressIndex), member.upNumber, memberStatusFromInt(member.status.id),
         member.rolesIndexes.map(roleMapping).to[Set])
     }
 
