@@ -22,7 +22,6 @@ object TestUtils {
   def temporaryServerAddress(address: String = "127.0.0.1", udp: Boolean = false): InetSocketAddress =
     temporaryServerAddresses(1, address, udp).head
 
-<<<<<<< HEAD
   def temporaryServerAddresses(numberOfAddresses: Int, hostname: String = "127.0.0.1", udp: Boolean = false): immutable.IndexedSeq[InetSocketAddress] = {
     Vector.fill(numberOfAddresses) {
       val serverSocket: GeneralSocket =
