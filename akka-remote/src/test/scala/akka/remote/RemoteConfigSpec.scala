@@ -77,6 +77,13 @@ class RemoteConfigSpec extends AkkaSpec(
 
     }
 
+    "contain correct netty.tcp values in reference.conf" in {
+      val c = RARP(system).provider.remoteSettings.config.getConfig("akka.remote.netty.tcp")
+
+      c.getBytes("maximum-frame-size") must be(128000)
+      c.getBytes("log-frame-size-exceeding") must be(128000)
+    }
+
     "contain correct socket worker pool configuration values in reference.conf" in {
       val c = RARP(system).provider.remoteSettings.config.getConfig("akka.remote.netty.tcp")
 

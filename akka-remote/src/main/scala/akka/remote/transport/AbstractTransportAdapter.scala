@@ -77,6 +77,8 @@ abstract class AbstractTransportAdapter(protected val wrappedTransport: Transpor
 
   override def maximumPayloadBytes: Int = wrappedTransport.maximumPayloadBytes - maximumOverhead
 
+  override def logPayloadBytes(msg: Any, payloadBytes: Int): Unit = wrappedTransport.logPayloadBytes(msg, payloadBytes)
+
   override def listen: Future[(Address, Promise[AssociationEventListener])] = {
     val upstreamListenerPromise: Promise[AssociationEventListener] = Promise()
 

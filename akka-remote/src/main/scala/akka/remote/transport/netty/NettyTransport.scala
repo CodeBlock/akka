@@ -27,6 +27,9 @@ import scala.concurrent.{ ExecutionContext, Promise, Future, blocking }
 import scala.util.{ Failure, Success, Try }
 import scala.util.control.{ NoStackTrace, NonFatal }
 import akka.util.Helpers.Requiring
+import akka.actor.SelectChildName
+import akka.routing.RouterEnvelope
+import scala.annotation.tailrec
 
 object NettyTransportSettings {
   sealed trait Mode
@@ -104,6 +107,8 @@ class NettyTransportSettings(config: Config) {
   val MaxFrameSize: Int = getBytes("maximum-frame-size").toInt requiring (
     _ >= 32000,
     s"Setting 'maximum-frame-size' must be at least 32000 bytes")
+
+  val LogFrameSizeExceeding: Int = getBytes("log-frame-size-exceeding").toInt
 
   val Backlog: Int = getInt("backlog")
 
@@ -234,6 +239,39 @@ class NettyTransport(val settings: NettyTransportSettings, val system: ExtendedA
 
   override val schemeIdentifier: String = (if (EnableSsl) "ssl." else "") + TransportMode
   override def maximumPayloadBytes: Int = settings.MaxFrameSize
+
+  private lazy val maxPayloadBytes: ConcurrentHashMap[Class[_], Integer] = new ConcurrentHashMap
+
+  /**
+   * Logging of the size of different message types.
+   * Maximum detected size per message type is logged once, with
+   * and increase threshold of 10%.
+   */
+  override def logPayloadBytes(msg: Any, payloadBytes: Int): Unit =
+    if (payloadBytes >= settings.LogFrameSizeExceeding) {
+      val clazz = msg match {
+        case x: SelectChildName ⇒ x.wrappedMessage.getClass
+        case x: RouterEnvelope  ⇒ x.message.getClass
+        case _                  ⇒ msg.getClass
+      }
+
+      // 10% threshold until next log
+      def newMax = (payloadBytes * 1.1).toInt
+
+      @tailrec def check(): Unit = {
+        val max = maxPayloadBytes.get(clazz)
+        if (max eq null) {
+          if (maxPayloadBytes.putIfAbsent(clazz, newMax) eq null)
+            log.info("Payload size for [{}] is [{}] bytes", clazz.getName, payloadBytes)
+          else check()
+        } else if (payloadBytes > max) {
+          if (maxPayloadBytes.replace(clazz, max, newMax))
+            log.info("New maximum payload size for [{}] is [{}] bytes", clazz.getName, payloadBytes)
+          else check()
+        }
+      }
+      check()
+    }
 
   private final val isDatagram = TransportMode == Udp
 

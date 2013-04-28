@@ -90,6 +90,12 @@ trait Transport {
   def maximumPayloadBytes: Int
 
   /**
+   * Possibility to log or collect statistics. Invoked with the serialized message size for
+   * each message to be written to the endpoint.
+   */
+  def logPayloadBytes(msg: Any, payloadBytes: Int): Unit
+
+  /**
    * Asynchronously attempts to setup the transport layer to listen and accept incoming associations. The result of the
    * attempt is wrapped by a Future returned by this method. The pair contained in the future contains a Promise for an
    * ActorRef. By completing this Promise with an [[akka.remote.transport.Transport.AssociationEventListener]], that

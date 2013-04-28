@@ -41,6 +41,8 @@ class TestTransport(
 
   override def isResponsibleFor(address: Address): Boolean = true
 
+  override def logPayloadBytes(msg: Any, payloadBytes: Int): Unit = ()
+
   private val associationListenerPromise = Promise[AssociationEventListener]()
 
   private def defaultListen: Future[(Address, Promise[AssociationEventListener])] = {
